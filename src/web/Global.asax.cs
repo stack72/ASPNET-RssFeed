@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
+using Ninject;
+using Ninject.Modules;
+using Ninject.Web.Mvc;
+using RssFeed.Models;
 
 namespace RssFeed
 {
-    // Note: For instructions on enabling IIS6 or IIS7 classic mode, 
-    // visit http://go.microsoft.com/?LinkId=9394801
-
-    public class MvcApplication : System.Web.HttpApplication
+    public class MvcApplication : HttpApplication
     {
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
@@ -35,6 +35,41 @@ namespace RssFeed
 
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
+            RegisterDependencyResolver();
+        }
+
+        private void RegisterDependencyResolver()
+        {
+            var kernel = new StandardKernel();
+            kernel.Bind<IRepositoryLayer>().To<RepositoryLayer>();
+            DependencyResolver.SetResolver(new NinjectDependencyResolver(kernel));
+        }
+    }
+
+    public class NinjectDependencyResolver : IDependencyResolver
+    {
+        private readonly IKernel _kernel;
+
+        public NinjectDependencyResolver(IKernel kernel)
+        {
+            _kernel = kernel;
+        }
+
+        public object GetService(Type serviceType)
+        {
+            return _kernel.TryGet(serviceType);
+        }
+
+        public IEnumerable<object> GetServices(Type serviceType)
+        {
+            try
+            {
+                return _kernel.GetAll(serviceType);
+            }
+            catch (Exception)
+            {
+                return new List<object>();
+            }
         }
     }
 }
